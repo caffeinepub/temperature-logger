@@ -1,0 +1,104 @@
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark industrial theme */
+    --background: 0.14 0.01 260;
+    --foreground: 0.92 0.015 80;
+
+    --card: 0.17 0.012 260;
+    --card-foreground: 0.92 0.015 80;
+
+    --popover: 0.17 0.012 260;
+    --popover-foreground: 0.92 0.015 80;
+
+    /* Amber/orange primary */
+    --primary: 0.72 0.17 55;
+    --primary-foreground: 0.12 0.01 260;
+
+    --secondary: 0.22 0.015 260;
+    --secondary-foreground: 0.85 0.01 80;
+
+    --muted: 0.2 0.012 260;
+    --muted-foreground: 0.55 0.02 80;
+
+    --accent: 0.25 0.02 260;
+    --accent-foreground: 0.92 0.015 80;
+
+    --destructive: 0.58 0.22 25;
+    --destructive-foreground: 0.98 0.005 80;
+
+    --border: 0.25 0.015 260;
+    --input: 0.22 0.012 260;
+    --ring: 0.72 0.17 55;
+
+    --radius: 0.375rem;
+
+    --chart-1: 0.72 0.17 55;
+    --chart-2: 0.65 0.18 30;
+    --chart-3: 0.58 0.15 200;
+    --chart-4: 0.55 0.13 140;
+    --chart-5: 0.78 0.12 100;
+
+    --sidebar: 0.12 0.012 260;
+    --sidebar-foreground: 0.85 0.01 80;
+    --sidebar-primary: 0.72 0.17 55;
+    --sidebar-primary-foreground: 0.12 0.01 260;
+    --sidebar-accent: 0.2 0.015 260;
+    --sidebar-accent-foreground: 0.85 0.01 80;
+    --sidebar-border: 0.22 0.012 260;
+    --sidebar-ring: 0.72 0.17 55;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+}
+
+/* Scanline overlay for industrial feel */
+.scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    oklch(0 0 0 / 0.03) 2px,
+    oklch(0 0 0 / 0.03) 4px
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Glow on primary color */
+.glow-amber {
+  box-shadow: 0 0 20px oklch(0.72 0.17 55 / 0.3), 0 0 40px
+    oklch(0.72 0.17 55 / 0.1);
+}
+
+.temp-readout {
+  font-family: "JetBrains Mono", monospace;
+}
