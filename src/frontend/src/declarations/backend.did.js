@@ -8,17 +8,24 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const Temperature = IDL.Record({
+  'value' : IDL.Int,
+  'timestamp' : IDL.Int,
+});
+
 export const idlService = IDL.Service({
   'addTemperature' : IDL.Func([IDL.Int], [], []),
-  'getTemperatures' : IDL.Func([], [IDL.Vec(IDL.Int)], ['query']),
+  'getTemperatures' : IDL.Func([], [IDL.Vec(Temperature)], ['query']),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const Temperature = IDL.Record({ 'value' : IDL.Int, 'timestamp' : IDL.Int });
+  
   return IDL.Service({
     'addTemperature' : IDL.Func([IDL.Int], [], []),
-    'getTemperatures' : IDL.Func([], [IDL.Vec(IDL.Int)], ['query']),
+    'getTemperatures' : IDL.Func([], [IDL.Vec(Temperature)], ['query']),
   });
 };
 

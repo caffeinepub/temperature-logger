@@ -89,9 +89,13 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface Temperature {
+    value: bigint;
+    timestamp: bigint;
+}
 export interface backendInterface {
     addTemperature(value: bigint): Promise<void>;
-    getTemperatures(): Promise<Array<bigint>>;
+    getTemperatures(): Promise<Array<Temperature>>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
@@ -109,7 +113,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getTemperatures(): Promise<Array<bigint>> {
+    async getTemperatures(): Promise<Array<Temperature>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getTemperatures();

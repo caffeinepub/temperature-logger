@@ -12,6 +12,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useActor } from "./hooks/useActor";
 import { useAddTemperature, useGetTemperatures } from "./hooks/useQueries";
 
 function getTempColor(temp: number): string {
@@ -31,6 +32,11 @@ function getTempLabel(temp: number): string {
   return "Extreme";
 }
 
+function formatTimestamp(ns: bigint): string {
+  const ms = ns / 1_000_000n;
+  return new Date(Number(ms)).toLocaleString();
+}
+
 export default function App() {
   const [inputValue, setInputValue] = useState("");
   const [urlSubmitStatus, setUrlSubmitStatus] = useState<
@@ -38,37 +44,49 @@ export default function App() {
   >("idle");
   const [urlTemp, setUrlTemp] = useState<number | null>(null);
   const hasProcessedUrl = useRef(false);
+  const pendingUrlTemp = useRef<number | null>(null);
 
+  const { actor } = useActor();
   const { data: temperatures, isLoading: tempLoading } = useGetTemperatures();
   const addMutation = useAddTemperature();
   const mutateRef = useRef(addMutation.mutate);
   mutateRef.current = addMutation.mutate;
 
-  // URL param auto-submit
+  // Effect 1: Parse URL param on mount and show loading banner
   useEffect(() => {
-    if (hasProcessedUrl.current) return;
     const params = new URLSearchParams(window.location.search);
     const tempParam = params.get("temp");
     if (tempParam !== null) {
       const parsed = Number.parseInt(tempParam, 10);
       if (!Number.isNaN(parsed)) {
-        hasProcessedUrl.current = true;
+        pendingUrlTemp.current = parsed;
         setUrlTemp(parsed);
         setUrlSubmitStatus("loading");
-        mutateRef.current(parsed, {
-          onSuccess: () => {
-            setUrlSubmitStatus("success");
-            toast.success(`Temperature ${parsed}°C logged via URL`);
-            history.replaceState({}, "", window.location.pathname);
-          },
-          onError: () => {
-            setUrlSubmitStatus("error");
-            toast.error("Failed to log temperature from URL");
-          },
-        });
       }
     }
   }, []);
+
+  // Effect 2: Fire mutation once actor is ready
+  useEffect(() => {
+    if (!actor) return;
+    if (hasProcessedUrl.current) return;
+    if (pendingUrlTemp.current === null) return;
+
+    const parsed = pendingUrlTemp.current;
+    hasProcessedUrl.current = true;
+
+    mutateRef.current(parsed, {
+      onSuccess: () => {
+        setUrlSubmitStatus("success");
+        toast.success(`Temperature ${parsed}°C logged via URL`);
+        history.replaceState({}, "", window.location.pathname);
+      },
+      onError: () => {
+        setUrlSubmitStatus("error");
+        toast.error("Failed to log temperature from URL");
+      },
+    });
+  }, [actor]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,8 +272,8 @@ export default function App() {
               animate="visible"
               variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
             >
-              {sorted.map((temp, index) => {
-                const value = Number(temp);
+              {sorted.map((entry, index) => {
+                const value = Number(entry.value);
                 const color = getTempColor(value);
                 const label = getTempLabel(value);
                 const markerIndex = index + 1;
@@ -282,13 +300,18 @@ export default function App() {
                         boxShadow: `0 0 8px ${color}`,
                       }}
                     />
-                    <span
-                      className="temp-readout text-2xl font-bold tabular-nums tracking-tight"
-                      style={{ color }}
-                    >
-                      {value > 0 ? "+" : ""}
-                      {value}°C
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span
+                        className="temp-readout text-2xl font-bold tabular-nums tracking-tight"
+                        style={{ color }}
+                      >
+                        {value > 0 ? "+" : ""}
+                        {value}°C
+                      </span>
+                      <span className="text-xs font-mono text-muted-foreground/50">
+                        {formatTimestamp(entry.timestamp)}
+                      </span>
+                    </div>
                     <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
                       {label}
                     </span>

@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Temperature } from "../backend";
 import { useActor } from "./useActor";
 
 export function useGetTemperatures() {
   const { actor, isFetching } = useActor();
-  return useQuery<bigint[]>({
+  return useQuery<Temperature[]>({
     queryKey: ["temperatures"],
     queryFn: async () => {
       if (!actor) return [];

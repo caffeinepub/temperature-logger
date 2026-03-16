@@ -10,9 +10,10 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface Temperature { 'value' : bigint, 'timestamp' : bigint }
 export interface _SERVICE {
   'addTemperature' : ActorMethod<[bigint], undefined>,
-  'getTemperatures' : ActorMethod<[], Array<bigint>>,
+  'getTemperatures' : ActorMethod<[], Array<Temperature>>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
