@@ -89,73 +89,60 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface Device {
+    id: bigint;
+    name: string;
+}
 export interface Temperature {
     value: bigint;
     timestamp: bigint;
 }
 export interface backendInterface {
-    addTemperature(value: bigint): Promise<void>;
-    getTemperatures(): Promise<Array<Temperature>>;
-    deleteTemperature(index: bigint): Promise<void>;
-    deleteTemperatures(indices: Array<bigint>): Promise<void>;
+    addDevice(name: string): Promise<bigint>;
+    getDevices(): Promise<Array<Device>>;
+    renameDevice(id: bigint, name: string): Promise<boolean>;
+    deleteDevice(id: bigint): Promise<boolean>;
+    addTemperature(deviceId: bigint, value: bigint): Promise<boolean>;
+    getTemperatures(deviceId: bigint): Promise<Array<Temperature>>;
+    deleteTemperature(deviceId: bigint, index: bigint): Promise<boolean>;
+    deleteTemperatures(deviceId: bigint, indices: Array<bigint>): Promise<boolean>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
-    async addTemperature(arg0: bigint): Promise<void> {
+    private async _call<T>(fn: () => Promise<T>): Promise<T> {
         if (this.processError) {
             try {
-                const result = await this.actor.addTemperature(arg0);
-                return result;
+                return await fn();
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
-        } else {
-            const result = await this.actor.addTemperature(arg0);
-            return result;
         }
+        return fn();
     }
-    async getTemperatures(): Promise<Array<Temperature>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getTemperatures();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getTemperatures();
-            return result;
-        }
+    async addDevice(name: string): Promise<bigint> {
+        return this._call(() => (this.actor as any).addDevice(name));
     }
-    async deleteTemperature(arg0: bigint): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.deleteTemperature(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.deleteTemperature(arg0);
-            return result;
-        }
+    async getDevices(): Promise<Array<Device>> {
+        return this._call(() => (this.actor as any).getDevices());
     }
-    async deleteTemperatures(arg0: Array<bigint>): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.deleteTemperatures(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.deleteTemperatures(arg0);
-            return result;
-        }
+    async renameDevice(id: bigint, name: string): Promise<boolean> {
+        return this._call(() => (this.actor as any).renameDevice(id, name));
+    }
+    async deleteDevice(id: bigint): Promise<boolean> {
+        return this._call(() => (this.actor as any).deleteDevice(id));
+    }
+    async addTemperature(deviceId: bigint, value: bigint): Promise<boolean> {
+        return this._call(() => (this.actor as any).addTemperature(deviceId, value));
+    }
+    async getTemperatures(deviceId: bigint): Promise<Array<Temperature>> {
+        return this._call(() => (this.actor as any).getTemperatures(deviceId));
+    }
+    async deleteTemperature(deviceId: bigint, index: bigint): Promise<boolean> {
+        return this._call(() => (this.actor as any).deleteTemperature(deviceId, index));
+    }
+    async deleteTemperatures(deviceId: bigint, indices: Array<bigint>): Promise<boolean> {
+        return this._call(() => (this.actor as any).deleteTemperatures(deviceId, indices));
     }
 }
 export interface CreateActorOptions {

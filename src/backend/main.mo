@@ -1,11 +1,23 @@
 import Time "mo:core/Time";
 import List "mo:core/List";
-import Array "mo:core/Array";
 
 actor {
   type Temperature = {
     value : Int;
     timestamp : Int;
+  };
+
+  type HeaderField = (Text, Text);
+  type HttpRequest = {
+    method : Text;
+    url : Text;
+    headers : [HeaderField];
+    body : Blob;
+  };
+  type HttpResponse = {
+    status_code : Nat16;
+    headers : [HeaderField];
+    body : Blob;
   };
 
   let temperatures = List.empty<Temperature>();
@@ -43,6 +55,26 @@ actor {
       if (not skip) {
         temperatures.add(arr[i]);
       };
+    };
+  };
+
+  public query func http_request(_ : HttpRequest) : async HttpResponse {
+    let arr = temperatures.toArray();
+    var json = "[";
+    var first = true;
+    for (t in arr.vals()) {
+      if (not first) { json := json # "," };
+      json := json # "{\"value\":" # t.value.toText() # ",\"timestamp\":" # t.timestamp.toText() # "}";
+      first := false;
+    };
+    json := json # "]";
+    {
+      status_code = 200;
+      headers = [
+        ("Content-Type", "application/json"),
+        ("Access-Control-Allow-Origin", "*"),
+      ];
+      body = json.encodeUtf8();
     };
   };
 };
