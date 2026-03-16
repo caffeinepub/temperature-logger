@@ -96,6 +96,8 @@ export interface Temperature {
 export interface backendInterface {
     addTemperature(value: bigint): Promise<void>;
     getTemperatures(): Promise<Array<Temperature>>;
+    deleteTemperature(index: bigint): Promise<void>;
+    deleteTemperatures(indices: Array<bigint>): Promise<void>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
@@ -124,6 +126,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getTemperatures();
+            return result;
+        }
+    }
+    async deleteTemperature(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteTemperature(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteTemperature(arg0);
+            return result;
+        }
+    }
+    async deleteTemperatures(arg0: Array<bigint>): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteTemperatures(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteTemperatures(arg0);
             return result;
         }
     }

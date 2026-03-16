@@ -27,3 +27,31 @@ export function useAddTemperature() {
     },
   });
 }
+
+export function useDeleteTemperature() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (originalIndex: number) => {
+      if (!actor) throw new Error("Backend not available");
+      await actor.deleteTemperature(BigInt(originalIndex));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["temperatures"] });
+    },
+  });
+}
+
+export function useDeleteTemperatures() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (indices: number[]) => {
+      if (!actor) throw new Error("Backend not available");
+      await actor.deleteTemperatures(indices.map(BigInt));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["temperatures"] });
+    },
+  });
+}

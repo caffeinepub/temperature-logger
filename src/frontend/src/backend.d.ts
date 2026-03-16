@@ -14,4 +14,6 @@ export interface Temperature {
 export interface backendInterface {
     addTemperature(value: bigint): Promise<void>;
     getTemperatures(): Promise<Array<Temperature>>;
+    deleteTemperature(index: bigint): Promise<void>;
+    deleteTemperatures(indices: Array<bigint>): Promise<void>;
 }

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -8,12 +9,18 @@ import {
   Loader2,
   Plus,
   Thermometer,
+  Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "./hooks/useActor";
-import { useAddTemperature, useGetTemperatures } from "./hooks/useQueries";
+import {
+  useAddTemperature,
+  useDeleteTemperature,
+  useDeleteTemperatures,
+  useGetTemperatures,
+} from "./hooks/useQueries";
 
 function getTempColor(temp: number): string {
   if (temp <= 0) return "oklch(0.65 0.15 220)";
@@ -43,12 +50,16 @@ export default function App() {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [urlTemp, setUrlTemp] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const hasProcessedUrl = useRef(false);
   const pendingUrlTemp = useRef<number | null>(null);
 
   const { actor } = useActor();
   const { data: temperatures, isLoading: tempLoading } = useGetTemperatures();
   const addMutation = useAddTemperature();
+  const deleteMutation = useDeleteTemperature();
+  const deleteMultiMutation = useDeleteTemperatures();
   const mutateRef = useRef(addMutation.mutate);
   mutateRef.current = addMutation.mutate;
 
@@ -107,6 +118,59 @@ export default function App() {
   };
 
   const sorted = temperatures ? [...temperatures].reverse() : [];
+  const totalCount = sorted.length;
+
+  const handleSingleDelete = (originalIndex: number) => {
+    setDeletingIndex(originalIndex);
+    deleteMutation.mutate(originalIndex, {
+      onSuccess: () => {
+        setDeletingIndex(null);
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(originalIndex);
+          return next;
+        });
+        toast.success("Entry deleted");
+      },
+      onError: () => {
+        setDeletingIndex(null);
+        toast.error("Failed to delete entry");
+      },
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    const indices = Array.from(selected);
+    deleteMultiMutation.mutate(indices, {
+      onSuccess: () => {
+        setSelected(new Set());
+        toast.success(
+          `${indices.length} entr${indices.length !== 1 ? "ies" : "y"} deleted`,
+        );
+      },
+      onError: () => {
+        toast.error("Failed to delete selected entries");
+      },
+    });
+  };
+
+  const toggleSelect = (originalIndex: number, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(originalIndex);
+      else next.delete(originalIndex);
+      return next;
+    });
+  };
+
+  const allSelected = totalCount > 0 && selected.size === totalCount;
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(sorted.map((_, i) => totalCount - 1 - i)));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -228,16 +292,61 @@ export default function App() {
 
         {/* Temperature List */}
         <section>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
               Recorded Temperatures
             </h2>
-            {sorted.length > 0 && (
-              <span className="text-xs font-mono text-muted-foreground">
-                {sorted.length} reading{sorted.length !== 1 ? "s" : ""}
-              </span>
-            )}
+            <div className="flex items-center gap-3 ml-auto">
+              {totalCount > 0 && (
+                <button
+                  type="button"
+                  data-ocid="temp.select_all_toggle"
+                  onClick={handleSelectAll}
+                  className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {allSelected ? "Deselect all" : "Select all"}
+                </button>
+              )}
+              {totalCount > 0 && (
+                <span className="text-xs font-mono text-muted-foreground">
+                  {totalCount} reading{totalCount !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Bulk delete bar */}
+          <AnimatePresence>
+            {selected.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-3"
+              >
+                <div className="flex items-center justify-between px-4 py-2.5 rounded-md bg-destructive/10 border border-destructive/30">
+                  <span className="text-xs font-mono text-destructive">
+                    {selected.size} selected
+                  </span>
+                  <Button
+                    data-ocid="temp.delete_selected_button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={deleteMultiMutation.isPending}
+                    onClick={handleDeleteSelected}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    {deleteMultiMutation.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3 h-3" />
+                    )}
+                    Delete selected
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {tempLoading ? (
             <div className="space-y-2" data-ocid="temp.loading_state">
@@ -277,6 +386,9 @@ export default function App() {
                 const color = getTempColor(value);
                 const label = getTempLabel(value);
                 const markerIndex = index + 1;
+                const originalIndex = totalCount - 1 - index;
+                const isChecked = selected.has(originalIndex);
+                const isDeleting = deletingIndex === originalIndex;
                 const itemKey = `temp-${index}-${value}`;
                 return (
                   <motion.li
@@ -286,13 +398,24 @@ export default function App() {
                       hidden: { opacity: 0, x: -12 },
                       visible: { opacity: 1, x: 0 },
                     }}
-                    className="relative flex items-center gap-4 px-4 py-3 rounded-md bg-card border border-border hover:border-primary/30 transition-colors group scanlines overflow-hidden"
+                    className="relative flex items-center gap-3 px-4 py-3 rounded-md bg-card border border-border hover:border-primary/30 transition-colors group scanlines overflow-hidden"
                   >
                     {/* Left accent bar */}
                     <div
                       className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-md"
                       style={{ backgroundColor: color }}
                     />
+
+                    {/* Checkbox */}
+                    <Checkbox
+                      data-ocid={`temp.checkbox.${markerIndex}`}
+                      checked={isChecked}
+                      onCheckedChange={(checked) =>
+                        toggleSelect(originalIndex, checked === true)
+                      }
+                      className="flex-shrink-0 border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+
                     <div
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{
@@ -315,9 +438,25 @@ export default function App() {
                     <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
                       {label}
                     </span>
-                    <span className="ml-auto text-xs font-mono text-muted-foreground/40">
-                      #{sorted.length - index}
+                    <span className="ml-auto text-xs font-mono text-muted-foreground/40 mr-2">
+                      #{totalCount - index}
                     </span>
+
+                    {/* Single delete button */}
+                    <button
+                      type="button"
+                      data-ocid={`temp.delete_button.${markerIndex}`}
+                      disabled={isDeleting || deleteMultiMutation.isPending}
+                      onClick={() => handleSingleDelete(originalIndex)}
+                      className="flex-shrink-0 p-1.5 rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Delete entry"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
                   </motion.li>
                 );
               })}
